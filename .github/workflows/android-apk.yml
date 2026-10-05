@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -48,8 +51,7 @@ jobs:
           pip install --break-system-packages pillow || pip install pillow
 
           # Fetch Selena official branding logo
-          curl -sSL "https://selenahub.com/assets/selena-hub-logo-CSl0s06P.png" -o selena-logo.png || \
-          curl -sSL "https://selenahub.com/favicon.png" -o selena-logo.png
+          curl -sSL "https://selenahub.com/assets/selena-hub-logo-CSl0s06P.png" -o selena-logo.png ||           curl -sSL "https://selenahub.com/favicon.png" -o selena-logo.png
 
           # Generate launcher icons with Python Pillow
           python3 - <<'PY'
