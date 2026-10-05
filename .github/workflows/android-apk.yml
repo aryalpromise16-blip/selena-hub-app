@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Create Selena Hub app shell
+        run: |
+          mkdir -p app/www && cd app
+          npm init -y >/dev/null
+          npm i @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          echo "<!doctype html><html><body>Loading Selena Hub…</body></html>" > www/index.html
+          cat > capacitor.config.json <<\EOF
+          {
+            "appId": "com.selenahub.app",
+            "appName": "Selena Hub",
+            "webDir": "www",
+            "server": { "url": "https://selenahub.com", "cleartext": false }
+          }
+          EOF
+          npx cap add android
+          npx cap sync android
+
+      - name: Build APK
+        working-directory: app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: selena-hub-apk
+          path: app/android/app/build/outputs/apk/debug/*.apk
