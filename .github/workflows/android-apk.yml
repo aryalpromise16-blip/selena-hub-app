@@ -45,7 +45,7 @@ jobs:
           CFG
           npx cap add android
 
-      - name: Configure branding icons & notification permissions
+      - name: Configure branding icons, notifications & release signing
         run: |
           cd app
           pip install --break-system-packages pillow || pip install pillow
@@ -122,14 +122,48 @@ jobs:
               print("Permissions already present")
           PY
 
+          # Inject permanent release keystore into build.gradle
+          python3 - <<'PY'
+          gradle_path = "android/app/build.gradle"
+          with open(gradle_path, "r", encoding="utf-8") as f:
+              content = f.read()
+
+          signing_config = """
+    signingConfigs {
+        release {
+            storeFile file("../../../signing/selena-release.p12")
+            storePassword "selenahub2026"
+            keyAlias "selena"
+            keyPassword "selenahub2026"
+            storeType "PKCS12"
+        }
+    }
+"""
+          content = content.replace("buildTypes {", signing_config + "
+    buildTypes {", 1)
+          content = content.replace("signingConfig signingConfigs.debug", "signingConfig signingConfigs.release")
+          
+          # Ensure release buildType also uses signingConfigs.release
+          if "signingConfig signingConfigs.release" not in content:
+              content = content.replace("buildTypes {", "buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }", 1)
+
+          with open(gradle_path, "w", encoding="utf-8") as f:
+              f.write(content)
+          print("Injected permanent release signingConfig into build.gradle")
+          PY
+
           npx cap sync android
 
-      - name: Build APK
+      - name: Build APK with permanent release key
         working-directory: app/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk ../selena-hub.apk
+          ./gradlew assembleRelease assembleDebug --no-daemon
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk ../selena-hub.apk
+          else
+            cp app/build/outputs/apk/debug/app-debug.apk ../selena-hub.apk
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
