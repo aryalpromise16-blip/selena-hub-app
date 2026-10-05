@@ -45,6 +45,8 @@ jobs:
       - name: Configure branding icons & notification permissions
         run: |
           cd app
+          pip install --break-system-packages pillow || pip install pillow
+
           # Fetch Selena official branding logo
           curl -sSL "https://selenahub.com/assets/selena-hub-logo-CSl0s06P.png" -o selena-logo.png || \
           curl -sSL "https://selenahub.com/favicon.png" -o selena-logo.png
@@ -98,8 +100,6 @@ jobs:
 
           # Inject permissions into AndroidManifest.xml
           python3 - <<'PY'
-          import re
-
           manifest_path = "android/app/src/main/AndroidManifest.xml"
           with open(manifest_path, "r", encoding="utf-8") as f:
               content = f.read()
