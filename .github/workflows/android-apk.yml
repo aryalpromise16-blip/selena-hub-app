@@ -18,15 +18,13 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
-
-      - uses: android-actions/setup-android@v3
+          java-version: 17
 
       - name: Create Selena Hub app shell
         run: |
           mkdir -p app/www && cd app
           npm init -y >/dev/null
-          npm i @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
           echo "<!doctype html><html><body>Loading Selena Hub…</body></html>" > www/index.html
           cat > capacitor.config.json <<\EOF
           {
@@ -39,7 +37,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Build APK
+      - name: Accept Android Licenses & Build APK
         working-directory: app/android
         run: |
           chmod +x gradlew
