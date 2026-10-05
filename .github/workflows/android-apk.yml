@@ -25,25 +25,119 @@ jobs:
           mkdir -p app/www && cd app
           npm init -y >/dev/null
           npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
-          echo "<!doctype html><html><body>Loading Selena Hub…</body></html>" > www/index.html
-          cat > capacitor.config.json <<\EOF
+          echo '<!doctype html><html><body>Loading Selena Hub…</body></html>' > www/index.html
+          cat > capacitor.config.json <<'CFG'
           {
             "appId": "com.selenahub.app",
             "appName": "Selena Hub",
             "webDir": "www",
-            "server": { "url": "https://selenahub.com", "cleartext": false }
+            "server": {
+              "url": "https://selenahub.com/?app=android",
+              "cleartext": false
+            },
+            "android": {
+              "appendUserAgent": "SelenaHubApp"
+            }
           }
-          EOF
+          CFG
           npx cap add android
+
+      - name: Configure branding icons & notification permissions
+        run: |
+          cd app
+          # Fetch Selena official branding logo
+          curl -sSL "https://selenahub.com/assets/selena-hub-logo-CSl0s06P.png" -o selena-logo.png || \
+          curl -sSL "https://selenahub.com/favicon.png" -o selena-logo.png
+
+          # Generate launcher icons with Python Pillow
+          python3 - <<'PY'
+          import os
+          from PIL import Image
+
+          src_logo = "selena-logo.png"
+          img = Image.open(src_logo).convert("RGBA")
+
+          res_dir = "android/app/src/main/res"
+
+          # Icon sizes
+          densities = {
+              "mipmap-mdpi": (48, 108),
+              "mipmap-hdpi": (72, 162),
+              "mipmap-xhdpi": (96, 216),
+              "mipmap-xxhdpi": (144, 324),
+              "mipmap-xxxhdpi": (192, 432)
+          }
+
+          for folder, (std_size, fg_size) in densities.items():
+              target_folder = os.path.join(res_dir, folder)
+              os.makedirs(target_folder, exist_ok=True)
+              
+              # Standard square & round icons
+              icon = img.resize((std_size, std_size), Image.Resampling.LANCZOS)
+              icon.save(os.path.join(target_folder, "ic_launcher.png"), "PNG")
+              icon.save(os.path.join(target_folder, "ic_launcher_round.png"), "PNG")
+              
+              # Adaptive icon foreground (centered with padding on transparent canvas)
+              fg = Image.new("RGBA", (fg_size, fg_size), (0, 0, 0, 0))
+              content_size = int(fg_size * 0.72)
+              scaled_logo = img.resize((content_size, content_size), Image.Resampling.LANCZOS)
+              offset = (fg_size - content_size) // 2
+              fg.paste(scaled_logo, (offset, offset), scaled_logo)
+              fg.save(os.path.join(target_folder, "ic_launcher_foreground.png"), "PNG")
+
+          print("Generated all mipmap icons successfully")
+          PY
+
+          # Set adaptive icon background color to Selena Plum #23032b
+          cat > android/app/src/main/res/values/ic_launcher_background.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#23032b</color>
+          </resources>
+          XML
+
+          # Inject permissions into AndroidManifest.xml
+          python3 - <<'PY'
+          import re
+
+          manifest_path = "android/app/src/main/AndroidManifest.xml"
+          with open(manifest_path, "r", encoding="utf-8") as f:
+              content = f.read()
+
+          permissions = """
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.VIBRATE" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+          """
+
+          if "POST_NOTIFICATIONS" not in content:
+              content = content.replace("<application", permissions + "\n    <application", 1)
+              with open(manifest_path, "w", encoding="utf-8") as f:
+                  f.write(content)
+              print("Added POST_NOTIFICATIONS permission to AndroidManifest.xml")
+          else:
+              print("Permissions already present")
+          PY
+
           npx cap sync android
 
-      - name: Accept Android Licenses & Build APK
+      - name: Build APK
         working-directory: app/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../selena-hub.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: selena-hub-apk
-          path: app/android/app/build/outputs/apk/debug/*.apk
+          path: app/selena-hub.apk
+
+      - name: Publish latest APK download release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view android-latest >/dev/null 2>&1 || gh release create android-latest --title "Selena Hub Android" --notes "Official Selena Hub Android APK"
+          gh release upload android-latest app/selena-hub.apk --clobber
