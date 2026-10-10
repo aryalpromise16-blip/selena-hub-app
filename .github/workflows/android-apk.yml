@@ -27,7 +27,7 @@ jobs:
         run: |
           mkdir -p app/www && cd app
           npm init -y >/dev/null
-          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/push-notifications@6
           echo '<!doctype html><html><body>Loading Selena Hub…</body></html>' > www/index.html
           cat > capacitor.config.json <<'CFG'
           {
@@ -151,6 +151,14 @@ jobs:
               f.write(content)
           print("Injected permanent release signingConfig into build.gradle")
           PY
+
+          # Copy Firebase google-services.json for push notifications
+          if [ -f ../google-services.json ]; then
+            cp ../google-services.json android/app/google-services.json
+            echo "Copied google-services.json to android/app/"
+          else
+            echo "google-services.json not found!"
+          fi
 
           npx cap sync android
 
