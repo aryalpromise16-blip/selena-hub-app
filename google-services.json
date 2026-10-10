@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "975984027647",
+    "project_id": "selena-hub",
+    "storage_bucket": "selena-hub.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975984027647:android:d99e7572b38a02e503a9ca",
+        "android_client_info": {
+          "package_name": "Com.selenahub.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3FhS838GBlKIaPemoX50VsVrHr1r_kI4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975984027647:android:1b8e00d30bbcebad03a9ca",
+        "android_client_info": {
+          "package_name": "com.selenahub.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3FhS838GBlKIaPemoX50VsVrHr1r_kI4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
