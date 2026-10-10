@@ -14,11 +14,16 @@ cat > capacitor.config.json <<'CFG'
   "appName": "Selena Hub",
   "webDir": "www",
   "server": {
-    "url": "https://selenahub.com/?app=android",
-    "cleartext": false
+    "url": "https://selenahub.com",
+    "cleartext": false,
+    "allowNavigation": [
+      "selenahub.com",
+      "*.selenahub.com"
+    ]
   },
   "android": {
-    "appendUserAgent": "SelenaHubApp"
+    "appendUserAgent": "SelenaHubApp",
+    "useLegacyBridge": true
   }
 }
 CFG
@@ -68,7 +73,7 @@ cat > android/app/src/main/res/values/ic_launcher_background.xml <<'XML'
 </resources>
 XML
 
-# 3. Permissions & signing
+# 3. Permissions & signing & version bump
 python3 - <<'PY'
 manifest_path = "android/app/src/main/AndroidManifest.xml"
 with open(manifest_path, "r", encoding="utf-8") as f:
@@ -91,6 +96,10 @@ gradle_path = "android/app/build.gradle"
 with open(gradle_path, "r", encoding="utf-8") as f:
     gradle = f.read()
 
+# Bump versionCode to 2 and versionName to 1.1 so Android OS detects upgrade cleanly
+gradle = gradle.replace("versionCode 1", "versionCode 2")
+gradle = gradle.replace('versionName "1.0"', 'versionName "1.1"')
+
 signing = """
     signingConfigs {
         release {
@@ -110,7 +119,7 @@ if "signingConfigs {" not in gradle:
         gradle = gradle.replace("buildTypes {", "buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }", 1)
     with open(gradle_path, "w", encoding="utf-8") as f:
         f.write(gradle)
-    print("Added release signing config")
+    print("Added release signing config and version bump")
 PY
 
 # 4. Copy google-services.json for push notifications
